@@ -1,0 +1,9 @@
+.idea/
+__pycache__/
+
+.env
+history.db
+
+# Personal deployment script
+deploy.sh
+cron.log
