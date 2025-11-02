@@ -76,6 +76,7 @@ Options:
 Commands:
   history  Print log of status ranges.
   info     Show detailed plug info.
+  log      Print raw event log entries.
   record   Record plug and device state to history DB; This command is...
   status   Show On/Off status.
 ```
