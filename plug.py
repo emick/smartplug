@@ -239,15 +239,24 @@ def record(ctx: click.Context, threshold: float) -> None:
 
 
 @cli.command()
-def history() -> None:
+@click.option("--limit", default=20, show_default=True, help="Number of rows to show.")
+@click.option("--all", "show_all", is_flag=True, help="Show the full history instead of the latest entries.")
+def history(limit: int, show_all: bool) -> None:
     """Print log of status ranges."""
     ensure_db()
+    if limit <= 0 and not show_all:
+        logger.error("Limit must be greater than zero.")
+        return
+
     try:
         with sqlite3.connect(DB_PATH) as conn:
             cursor = conn.cursor()
-            cursor.execute(
-                "SELECT start, end, plug_state, device_state FROM status_log ORDER BY start DESC"
-            )
+            query = "SELECT start, end, plug_state, device_state FROM status_log ORDER BY start DESC"
+            params: tuple = ()
+            if not show_all:
+                query += " LIMIT ?"
+                params = (limit,)
+            cursor.execute(query, params)
             rows = cursor.fetchall()
 
             if not rows:
@@ -280,8 +289,86 @@ def history() -> None:
 
                 print(f"{time_range:<40} {duration_str:<8} {plug_state:<6} {device_state:<8}")
 
+            if not show_all:
+                print(f"\nShowing latest {limit} entries. Use --all to show the full history.")
+
     except Exception as e:
         logger.error("Failed to load history: {}", e)
+
+
+@cli.command(name="log")
+@click.option("--limit", default=50, show_default=True, help="Number of rows to show.")
+@click.option("--all", "show_all", is_flag=True, help="Show the full event log instead of limiting results.")
+def show_log(limit: int, show_all: bool) -> None:
+    """Print raw event log entries."""
+    ensure_db()
+    if limit <= 0 and not show_all:
+        logger.error("Limit must be greater than zero.")
+        return
+
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            query = """
+                SELECT
+                    recorded_at,
+                    plug_state,
+                    device_state,
+                    plug_power,
+                    countdown_s,
+                    energy_wh,
+                    current_a,
+                    voltage_v,
+                    power_w,
+                    relay_status,
+                    fault_code
+                FROM event_log
+                ORDER BY recorded_at DESC
+            """
+            params: tuple = ()
+            if not show_all:
+                query += " LIMIT ?"
+                params = (limit,)
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+
+            if not rows:
+                print("No event log entries found.")
+                return
+
+            header = (
+                f"{'Recorded At':<20} {'Plug':<6} {'Device':<8} {'Power(W)':<9} "
+                f"{'Voltage(V)':<11} {'Current(A)':<11} {'Energy(Wh)':<11} "
+                f"{'Countdown(s)':<13} {'Relay':<8} {'Fault':<5}"
+            )
+            print(header)
+            print("-" * len(header))
+
+            for (
+                recorded_at,
+                plug_state,
+                device_state,
+                plug_power,
+                countdown_s,
+                energy_wh,
+                current_a,
+                voltage_v,
+                power_w,
+                relay_status,
+                fault_code,
+            ) in rows:
+                recorded_local = parse_timestamp(recorded_at).astimezone(LOCAL_TZ).strftime("%Y-%m-%d %H:%M:%S")
+                print(
+                    f"{recorded_local:<20} {plug_state:<6} {device_state:<8} "
+                    f"{power_w:<9.1f} {voltage_v:<11.1f} {current_a:<11.3f} "
+                    f"{energy_wh:<11} {countdown_s:<13} {relay_status:<8} {fault_code:<5}"
+                )
+
+            if not show_all:
+                print(f"\nShowing latest {limit} entries. Use --all to show the full event log.")
+
+    except Exception as e:
+        logger.error("Failed to load event log: {}", e)
 
 
 if __name__ == "__main__":
