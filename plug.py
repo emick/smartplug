@@ -76,8 +76,6 @@ def evaluate_plug_state(plug: TuyaSmartPlug, threshold) -> tuple[str, str]:
         device_state = "Off"
     elif plug.power_w > threshold:
         device_state = "On"
-    elif plug.power_w > 0:
-        device_state = "Standby"
     else:
         device_state = "Off"
     return plug_state, device_state
@@ -154,7 +152,7 @@ def info(ctx: click.Context) -> None:
 @click.option("--threshold", default=5.0, envvar="THRESHOLD", show_default=True, help="Power threshold (W) to detect active usage")
 @click.pass_context
 def status(ctx: click.Context, threshold: float) -> None:
-    """Show On/Off/Standby status."""
+    """Show On/Off status."""
     try:
         plug = fetch_plug(
             api_device_id=ctx.obj["api_device_id"],

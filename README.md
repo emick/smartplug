@@ -77,7 +77,7 @@ Commands:
   history  Print log of status ranges.
   info     Show detailed plug info.
   record   Record plug and device state to history DB; This command is...
-  status   Show On/Off/Standby status.
+  status   Show On/Off status.
 ```
 <!-- [[[end]]] -->
 
@@ -91,3 +91,7 @@ Edit crontab with `crontab -e` to include something like this:
 ```
 
 Optionally add logging `>> /path/to/smartplug/cron.log 2>&1`:
+
+## Standby detection
+
+The code used to have standby detection, but the device sends brief 0 W results which cause Standby and Off flip-flop.
